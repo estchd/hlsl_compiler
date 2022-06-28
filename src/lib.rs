@@ -17,7 +17,7 @@ pub use effect_compile_flags::{
 
 #[cfg(test)]
 mod test {
-	use crate::{compile_from_file};
+	use crate::{compile_from_file, compile_from_file_to_file};
 	use crate::CompileFlags;
 	use crate::EffectCompileFlags;
 
@@ -39,6 +39,33 @@ mod test {
 				print_error_messages(messages);
 			}
 			panic!("Compilation Error: {}", error);
+		}
+		if let Some(messages) = messages {
+			eprintln!("Error messages:");
+			print_error_messages(messages);
+			panic!("Success but error messages")
+		}
+	}
+
+	#[test]
+	fn test_compile_from_file_to_file() {
+		let (result, messages) = compile_from_file_to_file(
+			"test_files/pixel_shader.hlsl".to_string(),
+			"test_output/pixel_shader.cso".to_string(),
+			None,
+			None,
+			"PShader".to_string(),
+			"ps_5_0".to_string(),
+			CompileFlags::empty(),
+			EffectCompileFlags::empty()
+		);
+
+		if let Err(error) = result {
+			if let Some(messages) = messages {
+				eprintln!("Error messages:");
+				print_error_messages(messages);
+			}
+			panic!("Compilation Error: {:?}", error);
 		}
 		if let Some(messages) = messages {
 			eprintln!("Error messages:");
