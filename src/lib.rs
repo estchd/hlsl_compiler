@@ -18,6 +18,7 @@ pub use effect_compile_flags::{
 #[cfg(test)]
 mod test {
 	use crate::{compile_from_file, compile_from_file_to_file};
+	use crate::compile::OptionalInclude;
 	use crate::CompileFlags;
 	use crate::EffectCompileFlags;
 
@@ -26,7 +27,7 @@ mod test {
 		let (result, messages) = compile_from_file(
 			"test_files/pixel_shader.hlsl".to_string(),
 			None,
-			None,
+			OptionalInclude::None,
 			"PShader".to_string(),
 			"ps_5_0".to_string(),
 			CompileFlags::empty(),
@@ -53,7 +54,7 @@ mod test {
 			"test_files/pixel_shader.hlsl".to_string(),
 			"test_output/pixel_shader.cso".to_string(),
 			None,
-			None,
+			OptionalInclude::None,
 			"PShader".to_string(),
 			"ps_5_0".to_string(),
 			CompileFlags::empty(),

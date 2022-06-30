@@ -9,8 +9,9 @@ use crate::effect_compile_flags::EffectCompileFlags;
 use thiserror::Error;
 use widestring::error::ContainsNul;
 use widestring::U16CString;
-use windows::core::{IntoParam, PCSTR, PCWSTR};
+use windows::core::{PCSTR, PCWSTR};
 use windows::Win32::Graphics::Direct3D::Fxc::D3DCompileFromFile;
+use windows::Win32::Graphics::Hlsl::D3D_COMPILE_STANDARD_FILE_INCLUDE;
 
 pub struct ShaderMacro {
 	pub name: String,
@@ -22,6 +23,12 @@ pub struct OsShaderMacro {
 	pub definition: CString
 }
 
+pub enum OptionalInclude {
+	Some(ID3DInclude),
+	Default,
+	None
+}
+
 #[derive(Error, Debug)]
 pub enum CompileFromFileToFileError {
 	#[error("error during compilation")]
@@ -30,11 +37,11 @@ pub enum CompileFromFileToFileError {
 	IO(#[from] std::io::Error)
 }
 
-pub fn compile_from_file_to_file<'a, T: IntoParam<'a, ID3DInclude>>(
+pub fn compile_from_file_to_file(
 	input_file_name: String,
 	output_file_name: String,
 	defines: Option<Vec<ShaderMacro>>,
-	include: T,
+	include: OptionalInclude,
 	entry_point: String,
 	target: String,
 	compile_flags: CompileFlags,
@@ -73,10 +80,10 @@ pub fn compile_from_file_to_file<'a, T: IntoParam<'a, ID3DInclude>>(
 	}
 }
 
-pub fn compile_from_file<'a, T: IntoParam<'a, ID3DInclude>>(
+pub fn compile_from_file(
 	file_name: String,
 	defines: Option<Vec<ShaderMacro>>,
-	include: T,
+	include: OptionalInclude,
 	entry_point: String,
 	target: String,
 	compile_flags: CompileFlags,
@@ -107,18 +114,55 @@ pub fn compile_from_file<'a, T: IntoParam<'a, ID3DInclude>>(
 	let mut code = MaybeUninit::uninit();
 	let mut error_messages = MaybeUninit::uninit();
 
-	let result: windows::core::Result<()> = unsafe {
-		D3DCompileFromFile(
-			PCWSTR(os_file_name.as_ptr()),
-			defines_ptr,
-			include,
-			PCSTR(os_entry_point.as_ptr() as *const u8),
-			PCSTR(os_target.as_ptr() as *const u8),
-			compile_flags.bits(),
-			effect_compile_flags.bits(),
-			code.as_mut_ptr(),
-			error_messages.as_mut_ptr()
-		)
+	let result: windows::core::Result<()> = match include {
+		OptionalInclude::Some(include) => {
+			unsafe {
+				D3DCompileFromFile(
+					PCWSTR(os_file_name.as_ptr()),
+					defines_ptr,
+					include,
+					PCSTR(os_entry_point.as_ptr() as *const u8),
+					PCSTR(os_target.as_ptr() as *const u8),
+					compile_flags.bits(),
+					effect_compile_flags.bits(),
+					code.as_mut_ptr(),
+					error_messages.as_mut_ptr()
+				)
+			}
+		}
+		OptionalInclude::Default => {
+			let include: &ID3DInclude = unsafe {
+				std::mem::transmute::<_,&ID3DInclude>(&(D3D_COMPILE_STANDARD_FILE_INCLUDE as usize))
+			};
+			unsafe {
+				D3DCompileFromFile(
+					PCWSTR(os_file_name.as_ptr()),
+					defines_ptr,
+					include,
+					PCSTR(os_entry_point.as_ptr() as *const u8),
+					PCSTR(os_target.as_ptr() as *const u8),
+					compile_flags.bits(),
+					effect_compile_flags.bits(),
+					code.as_mut_ptr(),
+					error_messages.as_mut_ptr()
+				)
+			}
+		}
+		OptionalInclude::None => {
+			unsafe {
+				D3DCompileFromFile(
+					PCWSTR(os_file_name.as_ptr()),
+					defines_ptr,
+					None,
+					PCSTR(os_entry_point.as_ptr() as *const u8),
+					PCSTR(os_target.as_ptr() as *const u8),
+					compile_flags.bits(),
+					effect_compile_flags.bits(),
+					code.as_mut_ptr(),
+					error_messages.as_mut_ptr()
+				)
+			}
+		}
 	};
 
 	// Ensure that all the variables live at least until here
