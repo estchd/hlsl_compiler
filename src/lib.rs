@@ -6,7 +6,8 @@ pub use compile::{
 	compile_from_file,
 	compile_from_file_to_file,
 	CompileFromFileToFileError,
-	ShaderMacro
+	ShaderMacro,
+	OptionalInclude
 };
 pub use compile_flags::{
 	CompileFlags
