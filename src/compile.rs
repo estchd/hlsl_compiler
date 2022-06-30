@@ -9,7 +9,7 @@ use crate::effect_compile_flags::EffectCompileFlags;
 use thiserror::Error;
 use widestring::error::ContainsNul;
 use widestring::U16CString;
-use windows::core::{PCSTR, PCWSTR};
+use windows::core::{IntoParam, PCSTR, PCWSTR};
 use windows::Win32::Graphics::Direct3D::Fxc::D3DCompileFromFile;
 
 pub struct ShaderMacro {
@@ -30,11 +30,11 @@ pub enum CompileFromFileToFileError {
 	IO(#[from] std::io::Error)
 }
 
-pub fn compile_from_file_to_file(
+pub fn compile_from_file_to_file<'a, T: IntoParam<'a, ID3DInclude>>(
 	input_file_name: String,
 	output_file_name: String,
 	defines: Option<Vec<ShaderMacro>>,
-	include: Option<ID3DInclude>,
+	include: T,
 	entry_point: String,
 	target: String,
 	compile_flags: CompileFlags,
@@ -73,10 +73,10 @@ pub fn compile_from_file_to_file(
 	}
 }
 
-pub fn compile_from_file(
+pub fn compile_from_file<'a, T: IntoParam<'a, ID3DInclude>>(
 	file_name: String,
 	defines: Option<Vec<ShaderMacro>>,
-	include: Option<ID3DInclude>,
+	include: T,
 	entry_point: String,
 	target: String,
 	compile_flags: CompileFlags,
